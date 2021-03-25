@@ -9,6 +9,7 @@ class Pet: #V2
         self.asleep = False
         self.angry = False #Causes faster stat decay
         self.dirty = False #Causes emotes/anims to change slightly
+        self.bored = False #If true, pet may display "naughty" behavior in screen message
         self.type = "None" #Displays animal type in console when debug is enabled
         self.angry_timer = 0 #How many decay cycles pet is angry for
         self.energy = self.add_stat_variant(50, 100) #if <=30: pet may fall asleep
@@ -121,6 +122,10 @@ class Pet: #V2
                         if fun != "None":
                             self.conditions.append(fun)
                             self.state = "Bored"
+                            if self.bored == False:
+                                self.bored = True
+                        else:
+                            self.bored = False
                         if cleanliness != "None":
                             self.conditions.append(cleanliness)
                         if energy != "None":
@@ -139,10 +144,12 @@ class Pet: #V2
                     self.state = "Angry"
                     self.conditions = ["Angry"]
             else:
+                self.bored = False
                 self.asleep = True
                 self.state = "Asleep"
                 self.conditions = ["Asleep"]
         else:
+            self.bored = False
             self.alive = False
             self.state = "Dead"
             self.conditions = ["Dead"]
@@ -247,6 +254,8 @@ class Cat(Pet):
         super().__init__()
         self.type = "Cat"
         self.sound = "Meow"
+        self.food = "fish"
+        self.toy = "laser"
 
     def get_emotion(self, state):
         emotion = []
@@ -321,6 +330,8 @@ class Dog(Pet):
         super().__init__()
         self.type = "Dog"
         self.sound = "Woof"
+        self.food = "meat"
+        self.toy = "bone"
 
     def get_emotion(self, state):
         emotion = []
@@ -395,6 +406,8 @@ class Bird(Pet):
         super().__init__()
         self.type = "Bird"
         self.sound = "Chirp"
+        self.food = "seeds"
+        self.toy = "bell"
 
     def get_emotion(self, state):
         emotion = []
@@ -469,6 +482,8 @@ class Monkey(Pet):
         super().__init__()
         self.type = "Monkey"
         self.sound = "Oo Ee"
+        self.food = "banana"
+        self.toy = "ball"
 
     def get_emotion(self, state):
         emotion = []
@@ -543,6 +558,8 @@ class Deer(Pet):
         super().__init__()
         self.type = "Deer"
         self.sound = ""
+        self.food = "berries"
+        self.toy = "ball"
 
     def get_emotion(self, state):
         emotion = []

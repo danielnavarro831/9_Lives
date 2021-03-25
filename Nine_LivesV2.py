@@ -5,7 +5,9 @@ import random
 
 class Game:
     def __init__(self):
+        self.version = "1.01"
         self.app = Tk()
+        self.app.iconbitmap("./nine_lives_32.ico")
         self.app.resizable(False, False)
         self.app.title("9 Lives")
         self.pet = self.randomize_pet() #Randomizes animal and starting stats
@@ -13,6 +15,12 @@ class Game:
         self.await_revival = False #Turns True when pet is dead and revive/say goodbye buttons are on screen/Prevents anims and stat decay
         self.reset_timers = False #Turns on when reseting pet to prevent previous pet anims from overriding
         self.decay_time = 60000 #How often stats decay (or sleep increases energy) automatically
+
+        self.clear_message_timer = 0 #Sets to 3 when a new message appears. When 0, message resets to blank
+        self.clear_header_timer = 0 #Sets to 3 when new header appears. When 0, header resets to blank
+        self.prev_message = "" #Used to see if the current message can be cleared as time passes
+
+        self.version_label = Label(self.app, text="Ver: " + self.version + " ", bd=1, relief=SUNKEN, anchor=E)
         self.menu = Menu(self.app)
         self.app.config(menu=self.menu)
         self.file_menu = Menu(self.menu)
@@ -47,9 +55,12 @@ class Game:
         self.play_button.grid(row=2, column=1)
         self.feed_button.grid(row=3, column=0)
         self.groom_button.grid(row=3, column=1)
+        self.version_label.grid(row=4, column=0, columnspan=2, sticky=W+E)
         self.draw_pet(self.pet)
         self.pass_time(self.pet) #Starts the automatic decay process
         self.check_for_life(self.pet) #Checks every .5 seconds for life to see if buttons need to change
+        self.tick_down_clear_timer("Message")
+        self.tick_down_clear_timer("Header")
         self.app.mainloop()
 
     def randomize_name(self):
@@ -132,7 +143,9 @@ class Game:
         self.groom_button.grid(row=3, column=1)
         pet.reset()
         self.await_revival = False
+        self.header = ""
         self.emote = pet.get_emotion("Normal")
+        self.message = ""
         self.update_pet_viewer(pet)
 
     def check_for_life(self, pet):
@@ -158,18 +171,27 @@ class Game:
 
     def update_pet_viewer(self, pet):
         #Build the screen
+        if pet.asleep == False and "Z" in self.header:
+            self.header = ""
         self.screen = [self.header]
         for a in range(len(self.emote)):
             self.screen.append(self.emote[a])
         #Get message if no message exists
-        if self.message == "" and pet.asleep == False:
-            rando = random.randint(0, 2)
-            if rando == 1:
-                if pet.state != "Normal":
-                    self.message = "         " + pet.state
-            elif rando == 2:
-                self.message = "         " + pet.sound
+        if self.message == "" and pet.asleep == False and pet.alive:
+            messages = ["", "         " + pet.state, "         " + pet.sound]
+            naughty_behavior = [self.get_pet_name() + " chews on \nyour shoes!", self.get_pet_name() + " scratches \nthe couch!",
+                                self.get_pet_name() + " eats your \nhomework!", self.get_pet_name() + " bites your \nplants!"]
+            if pet.bored:
+                messages += naughty_behavior
+            rando = random.randint(0, len(messages) -1)
+            if messages[rando] != self.prev_message:
+                self.message = messages[rando]
+            else:
+                self.message = ""
+        if self.message != "" and self.message != self.prev_message:
+            self.clear_message_timer = 3
         self.screen.append(self.message)
+        self.prev_message = self.message
         #Clear and draw new screen
         self.pet_area["state"] = "normal" #enables text insert in pet area
         self.pet_area.delete(1.0, END)
@@ -178,11 +200,23 @@ class Game:
                 self.pet_area.insert(END, "        "+ self.screen[b] + "\n")
             else:
                 self.pet_area.insert(END, self.screen[b] + "\n")
-        #Clear header and message text after time passes
         self.pet_area["state"] = "disabled" #disables text insert in pet area
-        self.app.after(3000, self.clear_text, "Message")
-        if pet.asleep == False:
-            self.app.after(3000, self.clear_text, "Header")
+
+    def tick_down_clear_timer(self, text):
+        if text == "Message":
+            if self.clear_message_timer > 0:
+                self.clear_message_timer -= 1
+                if self.clear_message_timer == 0:
+                    self.clear_text("Message")
+        elif text == "Header":
+            if self.clear_header_timer > 0:
+                if self.pet.asleep:
+                    self.clear_header_timer = 0
+                else:
+                    self.clear_header_timer -= 1
+                    if self.clear_header_timer == 0:
+                        self.clear_text("Header")
+        self.app.after(1000, self.tick_down_clear_timer, text)
 
     def clear_text(self, text):
         if text == "Header":
@@ -232,6 +266,7 @@ class Game:
         if pet.asleep == False:
             hearts = pet.be_pet()
             self.header = hearts
+            self.clear_header_timer = 3
         else:
             self.rudely_awaken(pet) #You're a bad person and you should feel bad
         self.update_pet_viewer(pet)
@@ -240,7 +275,7 @@ class Game:
         if pet.asleep == False:
             pet.eat()
             pet.change_states()
-            food_desc = [" noms the \nfood!", " crunches \nand munches!", " eats!"]
+            food_desc = [" noms the \nfood!", " crunches \nand munches!", " eats!", " eats the \n" + pet.food + "!"]
             choice = ""
             if "Hungry" in pet.conditions:
                 food_desc.append(" excitedly \neats the food!")
@@ -285,7 +320,7 @@ class Game:
         if pet.asleep == False:
             pet.play()
             pet.change_states()
-            play_desc = [" chases the \nball!", " bites the \ntoy!", " chases the \nlaser!"]
+            play_desc = [" chases the \nball!", " bites the \ntoy!", " plays with \nthe " + pet.toy + "!"]
             if "Hungry" in pet.conditions:
                 play_desc.append(" tries to \neat the stuffing!")
             rando = random.randint(0, len(play_desc) -1)
